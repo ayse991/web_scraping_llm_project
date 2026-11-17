@@ -1,17 +1,18 @@
 import streamlit as st
-import requests
 from bs4 import BeautifulSoup
 import google.generativeai as genai
+import urllib.parse
+import requests
 
 # Sayfa Yapılandırması
 st.set_page_config(
-    page_title="Web Scraping & LLM Asistanı",
+    page_title="Akıllı Web Arama & LLM Asistanı",
     page_icon="🤖",
     layout="centered"
 )
 
-st.title("🌐 Akıllı İçerik & LLM Analiz Asistanı")
-st.write("İster bir web sitesi linki ver, ister metni doğrudan yapıştır; Gemini senin için anında analiz etsin!")
+st.title("🔍 Akıllı Web Arama & LLM Analiz Asistanı")
+st.write("Aramak istediğin kelimeyi yaz, uygulama web'de arasın ve Gemini senin için anında analiz etsin!")
 
 # Sidebar - API Anahtarı
 st.sidebar.header("Ayarlar")
@@ -22,64 +23,59 @@ api_key = st.sidebar.text_input(
     help="Google AI Studio'dan aldığınız API anahtarınızı buraya girebilirsiniz."
 )
 
-# Girdi Yöntemi Seçimi
-input_mode = st.radio("İşlem Türü Seç:", ["🔗 Web Sitesi URL'si", "✍️ Doğrudan Metin / İçerik Yapıştır"])
+# Arama Kutusu
+query = st.text_input("Ne aramak veya analiz ettirmek istiyorsun?", placeholder="Örn: ösym 2024 sıralama, python mülakat soruları...")
 
-text_content = ""
-
-if input_mode == "🔗 Web Sitesi URL'si":
-    url = st.text_input("Taranacak Web Sitesi URL'si:", placeholder="https://example.com")
-    if url and st.button("Veriyi Çek ve Analiz Et", type="primary"):
+if st.button("Web'de Ara ve Analiz Et", type="primary"):
+    if not api_key:
+        st.error("Lütfen sol menüden Gemini API anahtarını gir.")
+    elif not query:
+        st.warning("Lütfen aramak istediğin bir kelime veya konu yaz.")
+    else:
         try:
-            with st.spinner("Web sitesinden veriler kazınıyor..."):
+            with st.spinner("Web'de aranıyor ve veriler toplanıyor..."):
+                # DuckDuckGo üzerinden arama yapıp sonuçları çekme (API anahtarı gerektirmeyen pratik yöntem)
+                encoded_query = urllib.parse.quote(query)
+                search_url = f"https://html.duckduckgo.com/html/?q={encoded_query}"
                 headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
-                response = requests.get(url, headers=headers, timeout=10)
+                
+                response = requests.get(search_url, headers=headers, timeout=10)
                 response.raise_for_status()
                 
                 soup = BeautifulSoup(response.text, 'html.parser')
-                for script_or_style in soup(["script", "style", "nav", "footer", "header"]):
-                    script_or_style.decompose()
-                    
-                text_content = soup.get_text(separator=' ', strip=True)[:12000]
-                st.success("Veriler başarıyla kazındı!")
-        except Exception as e:
-            st.error(f"Bağlantı hatası: {e}")
+                
+                # Arama sonuçlarındaki başlık ve snippet'leri (özetleri) topla
+                results = []
+                for a in soup.find_all('a', class_='result__snippet', limit=5):
+                    results.append(a.get_text(strip=True))
+                
+                # Eğer snippet bulunamazsa genel metni al
+                if not results:
+                    for a in soup.find_all('a', class_='result__title', limit=5):
+                        results.append(a.get_text(strip=True))
+                        
+                combined_text = " ".join(results)
+                
+                if not combined_text:
+                    st.warning("Aradığın konuyla ilgili web üzerinde yeterli içerik bulunamadı. Başka bir kelime deneyebilirsin.")
+                else:
+                    st.success("Web verileri başarıyla bulundu!")
 
-else:
-    text_content = st.text_area("Analiz edilmesini istediğin metni buraya yapıştır:", placeholder="Örn: ÖSYM 2024 taban puanları ve sıralamaları hakkında kopyaladığın yazılar...")
-    if text_content and st.button("Metni Analiz Et", type="primary"):
-        pass # Metin zaten hazır
-
-# Ortak LLM Analiz Kısmı
-if text_content and api_key:
-    if st.button("Gemini ile Analiz Et", type="primary") or input_mode == "✍️ Doğrudan Metin / İçerik Yapıştır":
-        # Eğer butonlar çakışmasın diye kontrol ekleyelim
-        pass
-
-# Daha sade ve akışkan bir tetikleme için buton mantığı:
-if st.button("🤖 Gemini ile Analiz Başlat", type="primary"):
-    if not api_key:
-        st.error("Lütfen sol menüden Gemini API anahtarını gir.")
-    elif not text_content:
-        st.warning("Lütfen üstteki sekmelerden bir URL gir veya metin yapıştır.")
-    else:
-        with st.spinner("Gemini LLM içerigi analiz ediyor..."):
-            try:
+            with st.spinner("Gemini LLM bilgileri analiz ediyor..."):
                 genai.configure(api_key=api_key)
                 model = genai.GenerativeModel('gemini-1.5-flash')
                 
                 prompt = f"""
-                Aşağıdaki içeriği analiz et:
-                1. Bu metin/sayfa ne hakkında? Kısa bir özet geç.
-                2. Önemli başlıkları ve ana bilgileri maddeler halinde çıkar.
+                Kullanıcının yaptığı arama: "{query}"
+                Aşağıda bu arama sonucunda web'den elde edilen veriler bulunmaktadır. Bu verileri analiz et:
+                1. Bu arama konusu hakkında kapsamlı ve net bir özet sun.
+                2. Önemli detayları, sayısal verileri veya ana bilgileri maddeler halinde çıkar.
                 
-                İçerik:
-                {text_content}
+                Web Verileri:
+                {combined_text}
                 """
                 
                 prediction = model.generate_content(prompt)
                 
-                st.subheader("🤖 Analiz Sonucu")
-                st.markdown(prediction.text)
-            except Exception as e:
-                st.error(f"Analiz sırasında bir hata oluştu: {e}")
+                st.subheader("🤖 Gemini Analiz Sonucu")
+                st.
