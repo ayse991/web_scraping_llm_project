@@ -34,7 +34,6 @@ if st.button("Web'de Ara ve Analiz Et", type="primary"):
     else:
         try:
             with st.spinner("Web'de aranıyor ve veriler toplanıyor..."):
-                # DuckDuckGo üzerinden arama yapıp sonuçları çekme (API anahtarı gerektirmeyen pratik yöntem)
                 encoded_query = urllib.parse.quote(query)
                 search_url = f"https://html.duckduckgo.com/html/?q={encoded_query}"
                 headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
@@ -44,12 +43,10 @@ if st.button("Web'de Ara ve Analiz Et", type="primary"):
                 
                 soup = BeautifulSoup(response.text, 'html.parser')
                 
-                # Arama sonuçlarındaki başlık ve snippet'leri (özetleri) topla
                 results = []
                 for a in soup.find_all('a', class_='result__snippet', limit=5):
                     results.append(a.get_text(strip=True))
                 
-                # Eğer snippet bulunamazsa genel metni al
                 if not results:
                     for a in soup.find_all('a', class_='result__title', limit=5):
                         results.append(a.get_text(strip=True))
@@ -78,4 +75,7 @@ if st.button("Web'de Ara ve Analiz Et", type="primary"):
                 prediction = model.generate_content(prompt)
                 
                 st.subheader("🤖 Gemini Analiz Sonucu")
-                st.
+                st.markdown(prediction.text)
+
+        except Exception as e:
+            st.error(f"İşlem sırasında bir hata oluştu: {e}")
