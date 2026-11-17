@@ -55,8 +55,8 @@ if st.button("Web'de Ara ve Analiz Et", type="primary"):
             with st.spinner("Gemini LLM bilgileri analiz ediyor..."):
                 genai.configure(api_key=api_key)
                 
-                # En güncel ve hatasız model tanımlaması
-                model = genai.GenerativeModel('gemini-2.5-flash')
+                # Hatada belirtilen en güncel model ismi kullanıldı
+                model = genai.GenerativeModel('gemini-3.8-flash')
                 
                 prompt = f"""
                 Kullanıcının yaptığı arama: "{query}"
