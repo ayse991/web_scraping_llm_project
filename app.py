@@ -3,40 +3,41 @@ import google.generativeai as genai
 
 # Sayfa Yapılandırması
 st.set_page_config(
-    page_title="Hızlı Gemini Asistanı",
+    page_title="Anlık Web & Gemini Asistanı",
     page_icon="⚡",
     layout="centered"
 )
 
-st.title("⚡ Hızlı Gemini Asistanı")
-st.write("Aramak veya öğrenmek istediğin konuyu yaz, Gemini anında analiz etsin!")
+st.title("⚡ Anlık Web & Gemini Asistanı")
+st.write("Aramak istediğin konuyu yaz, saniyeler içinde güncel web verileriyle analiz edilsin!")
 
-# API Anahtarını doğrudan Streamlit Secrets'tan güvenli bir şekilde alıyoruz
+# API Anahtarını Streamlit Secrets'tan alıyoruz
 api_key = st.secrets.get("GOOGLE_API_KEY", "")
 
-# Soru Kutusu
-query = st.text_input("Ne öğrenmek istiyorsun?", placeholder="Örn: python mülakat soruları, ösym tarihleri...")
+query = st.text_input("Ne aramak veya öğrenmek istiyorsun?", placeholder="Örn: ösym 2026 takvimi, python son sürüm yenilikleri...")
 
-if st.button("Hemen Analiz Et", type="primary"):
+if st.button("Hemen Getir", type="primary"):
     if not api_key:
-        st.error("Streamlit Secrets içinde GOOGLE_API_KEY bulunamadı. Lütfen ayarlarınızı kontrol edin.")
+        st.error("Streamlit Secrets içinde GOOGLE_API_KEY bulunamadı.")
     elif not query:
-        st.warning("Lütfen bir konu yaz.")
+        st.warning("Lütfen bir şeyler yaz.")
     else:
         try:
-            with st.spinner("Yapay zeka yanıtı hazırlıyor..."):
+            with st.spinner("Anında aranıyor ve analiz ediliyor..."):
                 genai.configure(api_key=api_key)
-                model = genai.GenerativeModel('gemini-3.8-flash')
                 
-                prompt = f"""
-                Şu konu hakkında kapsamlı, net ve maddeler halinde bir analiz sun:
-                "{query}"
-                """
+                # Gemini'nin kendi dahili Google Arama aracını (tools) aktif ediyoruz.
+                # Bu sayede dışarıdan yavaş scraperlar kullanmaya gerek kalmaz, 
+                # model doğrudan Google gücüyle en güncel veriyi 2-3 saniyede çeker.
+                model = genai.GenerativeModel(
+                    model_name='gemini-3.8-flash',
+                    tools='google_search_retrieval'
+                )
                 
-                prediction = model.generate_content(prompt)
+                response = model.generate_content(query)
                 
-                st.subheader("🤖 Gemini Analiz Sonucu")
-                st.markdown(prediction.text)
+                st.subheader("🤖 Anlık Analiz Sonucu")
+                st.markdown(response.text)
 
         except Exception as e:
-            st.error(f"İşlem sırasında bir hata oluştu: {e}")
+            st.error(f"Bir hata oluştu: {e}")
