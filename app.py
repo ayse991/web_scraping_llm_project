@@ -10,10 +10,10 @@ st.set_page_config(
     layout="centered"
 )
 
-st.title("🌐 Web Scraping & LLM Analiz Projesi")
-st.write("Hedef web sitesinden içerik kazıyan ve Gemini LLM ile analiz eden tek dosyalık uygulama.")
+st.title("🌐 Akıllı İçerik & LLM Analiz Asistanı")
+st.write("İster bir web sitesi linki ver, ister metni doğrudan yapıştır; Gemini senin için anında analiz etsin!")
 
-# Sidebar - API Anahtarı ve Ayarlar
+# Sidebar - API Anahtarı
 st.sidebar.header("Ayarlar")
 api_key = st.sidebar.text_input(
     "Gemini API Key", 
@@ -22,44 +22,55 @@ api_key = st.sidebar.text_input(
     help="Google AI Studio'dan aldığınız API anahtarınızı buraya girebilirsiniz."
 )
 
-# Ana Ekran - URL Girdisi
-url = st.text_input("Taranacak Web Sitesi URL'si:", placeholder="https://example.com")
+# Girdi Yöntemi Seçimi
+input_mode = st.radio("İşlem Türü Seç:", ["🔗 Web Sitesi URL'si", "✍️ Doğrudan Metin / İçerik Yapıştır"])
 
-# İşlem Butonu
-if st.button("Veriyi Çek ve Analiz Et", type="primary"):
-    if not url:
-        st.warning("Lütfen taranacak bir URL girin.")
-    elif not api_key:
-        st.error("Lütfen bir Gemini API anahtarı girin.")
-    else:
+text_content = ""
+
+if input_mode == "🔗 Web Sitesi URL'si":
+    url = st.text_input("Taranacak Web Sitesi URL'si:", placeholder="https://example.com")
+    if url and st.button("Veriyi Çek ve Analiz Et", type="primary"):
         try:
-            # 1. Adım: Web Scraping
             with st.spinner("Web sitesinden veriler kazınıyor..."):
                 headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
                 response = requests.get(url, headers=headers, timeout=10)
                 response.raise_for_status()
                 
-                # HTML çözümleme
                 soup = BeautifulSoup(response.text, 'html.parser')
-                
-                # Gereksiz etiketleri temizle (script, style vb.)
                 for script_or_style in soup(["script", "style", "nav", "footer", "header"]):
                     script_or_style.decompose()
                     
-                # Metinleri al ve çok uzunsa kırp
-                raw_text = soup.get_text(separator=' ', strip=True)
-                text_content = raw_text[:12000] # LLM token sınırı için güvenli uzunluk
+                text_content = soup.get_text(separator=' ', strip=True)[:12000]
+                st.success("Veriler başarıyla kazındı!")
+        except Exception as e:
+            st.error(f"Bağlantı hatası: {e}")
 
-            st.success("Veriler başarıyla kazındı!")
+else:
+    text_content = st.text_area("Analiz edilmesini istediğin metni buraya yapıştır:", placeholder="Örn: ÖSYM 2024 taban puanları ve sıralamaları hakkında kopyaladığın yazılar...")
+    if text_content and st.button("Metni Analiz Et", type="primary"):
+        pass # Metin zaten hazır
 
-            # 2. Adım: LLM Analizi
-            with st.spinner("Gemini LLM ile içerik analiz ediliyor..."):
+# Ortak LLM Analiz Kısmı
+if text_content and api_key:
+    if st.button("Gemini ile Analiz Et", type="primary") or input_mode == "✍️ Doğrudan Metin / İçerik Yapıştır":
+        # Eğer butonlar çakışmasın diye kontrol ekleyelim
+        pass
+
+# Daha sade ve akışkan bir tetikleme için buton mantığı:
+if st.button("🤖 Gemini ile Analiz Başlat", type="primary"):
+    if not api_key:
+        st.error("Lütfen sol menüden Gemini API anahtarını gir.")
+    elif not text_content:
+        st.warning("Lütfen üstteki sekmelerden bir URL gir veya metin yapıştır.")
+    else:
+        with st.spinner("Gemini LLM içerigi analiz ediyor..."):
+            try:
                 genai.configure(api_key=api_key)
                 model = genai.GenerativeModel('gemini-1.5-flash')
                 
                 prompt = f"""
-                Aşağıda bir web sitesinden kazınan metin bulunmaktadır. Bu metni analiz et:
-                1. Bu site/sayfa ne hakkında? Kısa bir özet geç.
+                Aşağıdaki içeriği analiz et:
+                1. Bu metin/sayfa ne hakkında? Kısa bir özet geç.
                 2. Önemli başlıkları ve ana bilgileri maddeler halinde çıkar.
                 
                 İçerik:
@@ -68,13 +79,7 @@ if st.button("Veriyi Çek ve Analiz Et", type="primary"):
                 
                 prediction = model.generate_content(prompt)
                 
-                # Sonucu Göster
-                st.subheader("🤖 LLM Analiz Sonucu")
+                st.subheader("🤖 Analiz Sonucu")
                 st.markdown(prediction.text)
-                
-                # İsteğe bağlı ham metni gösterme
-                with st.expander("Kazınan Ham Metin Örneği"):
-                    st.write(text_content[:2000] + "...")
-
-        except Exception as e:
-            st.error(f"İşlem sırasında bir hata oluştu: {e}")
+            except Exception as e:
+                st.error(f"Analiz sırasında bir hata oluştu: {e}")
