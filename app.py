@@ -14,21 +14,15 @@ st.set_page_config(
 st.title("🔍 Akıllı Web Arama & LLM Analiz Asistanı")
 st.write("Aramak istediğin kelimeyi yaz, uygulama web'de arasın ve Gemini senin için anında analiz etsin!")
 
-# Sidebar - API Anahtarı
-st.sidebar.header("Ayarlar")
-api_key = st.sidebar.text_input(
-    "Gemini API Key", 
-    type="password", 
-    value=st.secrets.get("GOOGLE_API_KEY", ""),
-    help="Google AI Studio'dan aldığınız API anahtarınızı buraya girebilirsiniz."
-)
+# API Anahtarını doğrudan Streamlit Secrets'tan güvenli bir şekilde alıyoruz
+api_key = st.secrets.get("GOOGLE_API_KEY", "")
 
 # Arama Kutusu
 query = st.text_input("Ne aramak veya analiz ettirmek istiyorsun?", placeholder="Örn: ösym 2024 sıralama, python mülakat soruları...")
 
 if st.button("Web'de Ara ve Analiz Et", type="primary"):
     if not api_key:
-        st.error("Lütfen sol menüden Gemini API anahtarını gir.")
+        st.error("Streamlit Secrets içinde GOOGLE_API_KEY bulunamadı. Lütfen ayarlarınızı kontrol edin.")
     elif not query:
         st.warning("Lütfen aramak istediğin bir kelime veya konu yaz.")
     else:
@@ -60,7 +54,8 @@ if st.button("Web'de Ara ve Analiz Et", type="primary"):
 
             with st.spinner("Gemini LLM bilgileri analiz ediyor..."):
                 genai.configure(api_key=api_key)
-                model = genai.GenerativeModel('gemini-1.5-flash')
+                # Güncel ve stabil model ismi kullanıldı
+                model = genai.GenerativeModel('gemini-1.5-pro')
                 
                 prompt = f"""
                 Kullanıcının yaptığı arama: "{query}"
