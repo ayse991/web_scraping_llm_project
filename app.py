@@ -26,10 +26,10 @@ if st.button("Hemen Getir", type="primary"):
             with st.spinner("Anında aranıyor ve analiz ediliyor..."):
                 genai.configure(api_key=api_key)
                 
-                # Gemini'nin dahili arama aracıyla hızlı ve güncel yanıt
+                # En güncel SDK formatına uygun araç tanımı
                 model = genai.GenerativeModel(
                     model_name='gemini-3.8-flash',
-                    tools=[{"google_search": {}}]
+                    tools='google_search_retrieval'
                 )
                 
                 response = model.generate_content(query)
