@@ -17,7 +17,6 @@ if st.button("Hemen Gönder", type="primary"):
             with st.spinner("Düşünülüyor..."):
                 client = genai.Client(api_key=api_key)
                 
-                # En basit ve hızlı model çağrısı (history yok)
                 response = client.models.generate_content(
                     model='gemini-2.5-flash',
                     contents=query
@@ -27,4 +26,4 @@ if st.button("Hemen Gönder", type="primary"):
         except Exception as e:
             st.error(f"Bir hata oluştu: {e}")
             if "429" in str(e):
-                st.info("İpucu: Lütfen 1-2 dakika bekleyip tekrar deneyin. Ücretsiz kota dolmuş olabilir.")
+                st.info("İpucu: Lütfen 1-2 dakika bekleyip tekrar deneyin.")
