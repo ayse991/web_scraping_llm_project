@@ -4,4 +4,4 @@ beautifulsoup4
 pandas
 transformers
 torch
-google-generativeai
+google-genai
