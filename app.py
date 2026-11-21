@@ -1,4 +1,3 @@
-import os
 from typing import Optional
 
 import streamlit as st
@@ -16,18 +15,12 @@ st.set_page_config(
 )
 
 
-def resolve_api_key(sidebar_key: str) -> Optional[str]:
-    key = (sidebar_key or "").strip() or os.getenv("GEMINI_API_KEY", "").strip()
-    return key or None
-
-
 def analyze_cv_and_job(
-    api_key: str,
     cv_text: str,
     job_text: str,
     model_name: str = "gemini-2.5-flash",
 ) -> str:
-    client = genai.Client(api_key=api_key)
+    client = genai.Client()
 
     prompt = f"""
 Sen deneyimli bir teknik işe alım uzmanı ve kariyer danışmanısın.
@@ -59,11 +52,6 @@ st.caption("Özgeçmişin ile pozisyon ilanını karşılaştırarak uyum analiz
 
 with st.sidebar:
     st.header("Ayarlar")
-    api_key_input = st.text_input(
-        "Gemini API Anahtarı",
-        type="password",
-        help="Yerelde çalışırken proje klasöründeki .env dosyasına GEMINI_API_KEY olarak da ekleyebilirsin.",
-    )
     model_choice = st.selectbox(
         "Model Seçimi",
         options=["gemini-2.5-flash", "gemini-2.5-pro"],
@@ -121,10 +109,7 @@ with col_right:
 st.divider()
 
 if st.button("Eşleştirme Analizi Yap", type="primary"):
-    active_key = resolve_api_key(api_key_input)
-    if not active_key:
-        st.error("Kenar çubuğuna bir Gemini API anahtarı gir veya `.env` / ortam değişkenine `GEMINI_API_KEY` tanımla.")
-    elif not final_cv_text:
+    if not final_cv_text:
         st.error("Lütfen bir CV dosyası yükle veya CV metni gir.")
     elif not final_job_text:
         st.error("Lütfen bir ilan URL'si çek veya ilan metni gir.")
@@ -132,7 +117,6 @@ if st.button("Eşleştirme Analizi Yap", type="primary"):
         with st.spinner("CV ve pozisyon ilanı analiz ediliyor..."):
             try:
                 report = analyze_cv_and_job(
-                    api_key=active_key,
                     cv_text=final_cv_text,
                     job_text=final_job_text,
                     model_name=model_choice,
